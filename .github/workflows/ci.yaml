@@ -36,10 +36,11 @@ jobs:
       - name: Import Existing Resources
         run: |
           terraform init
+          terraform import aws_s3_bucket.lambda_deployment_bucket demo-lambda-deployment-bucket-nov || true
           terraform import aws_ecr_repository.lambda_deployment_repo lambda-deployment-repo || true
           terraform import aws_iam_role.lambda_role lambda_execution_role || true
 
-      # First, apply only the S3 bucket creation
+      # First, apply only the S3 bucket creation (if it didn't exist and needed to be created)
       - name: Run Terraform Apply for S3 Bucket
         run: |
           terraform apply -auto-approve -target=aws_s3_bucket.lambda_deployment_bucket
