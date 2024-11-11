@@ -45,7 +45,12 @@ jobs:
       - name: Terraform Refresh
         run: terraform refresh
 
-      # First, apply only the S3 bucket creation (if it didn't exist and needed to be created)
+      # Create or update the ECR repository (create if it doesn't exist)
+      - name: Terraform Apply for ECR Repository
+        run: |
+          terraform apply -auto-approve -target=aws_ecr_repository.lambda_deployment_repo
+
+      # Apply only the S3 bucket creation (if it didn't exist and needed to be created)
       - name: Run Terraform Apply for S3 Bucket
         run: |
           terraform apply -auto-approve -target=aws_s3_bucket.lambda_deployment_bucket
