@@ -49,11 +49,14 @@ jobs:
         run: |
           terraform apply -auto-approve -target=aws_s3_bucket.lambda_deployment_bucket
 
+      # Build Lambda ZIP file from App folder
       - name: Build Lambda ZIP
         run: |
           mkdir -p build
-          zip -r build/demo_lambda_function.zip . -x ".git/*" "*.md"
+          cd App
+          zip -r ../build/demo_lambda_function.zip demo_lambda_function.py -x "*.git/*" "*.md"
 
+      # Upload the Lambda ZIP to S3
       - name: Upload to S3
         run: |
           aws s3 cp build/demo_lambda_function.zip s3://demo-lambda-deployment-bucket-nov/demo_lambda_function.zip
