@@ -32,6 +32,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Run Terraform Init and Apply for Infrastructure
+        run: |
+          terraform init
+          terraform apply -auto-approve
+
       - name: Build Lambda ZIP
         run: |
           mkdir build
