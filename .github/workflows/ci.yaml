@@ -32,10 +32,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Run Terraform Init and Apply for Infrastructure
+      # First, apply only the S3 bucket creation
+      - name: Run Terraform Init and Apply for S3 Bucket
         run: |
           terraform init
-          terraform apply -auto-approve
+          terraform apply -auto-approve -target=aws_s3_bucket.lambda_deployment_bucket
 
       - name: Build Lambda ZIP
         run: |
@@ -46,7 +47,8 @@ jobs:
         run: |
           aws s3 cp build/demo_lambda_function.zip s3://demo-lambda-deployment-bucket-nov/demo_lambda_function.zip
 
-      - name: Run Terraform Init and Apply
+      # Run Terraform apply for the remaining resources, including the Lambda function
+      - name: Run Terraform Init and Apply for Lambda Deployment
         run: |
           terraform init
           terraform apply -auto-approve
