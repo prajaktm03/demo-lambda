@@ -68,7 +68,7 @@ jobs:
         run: |
           echo "ECR_REPO_URL=$(jq -r '.ecr_repo_url.value' tf_outputs.json)" >> $GITHUB_ENV
 
-      # Log in to ECR using the extracted URL
+      # Log in to ECR using the specified URL and region
       - name: Login to ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URL
