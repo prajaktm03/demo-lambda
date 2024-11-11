@@ -11,6 +11,7 @@ jobs:
 
     env:
       AWS_REGION: "us-east-1"
+      ECR_REPO_URL: "557690625714.dkr.ecr.us-east-1.amazonaws.com/lambda-deployment-repo"
 
     steps:
       - name: Checkout code
@@ -56,38 +57,16 @@ jobs:
           cd App
           zip -r ../build/demo_lambda_function.zip demo_lambda_function.py -x "*.git/*" "*.md"
 
-      # Capture Terraform outputs (including ECR URL)
-      - name: Capture Terraform Outputs
-        id: tf_outputs
-        run: |
-          terraform output -json > tf_outputs.json
-        shell: bash
-
-      # Extract the ECR repository URL from the Terraform output JSON
-      - name: Set ECR Repo URL
-        run: |
-          export ECR_REPO_URL=$(jq -r '.ecr_repo_url.value' tf_outputs.json)
-          if [ -z "$ECR_REPO_URL" ]; then
-            echo "ECR_REPO_URL is empty. Please check Terraform outputs."
-            exit 1
-          fi
-          echo "ECR_REPO_URL=$ECR_REPO_URL" >> $GITHUB_ENV
-
-      # Log in to ECR using the specified URL and region
-      - name: Login to ECR
+      # Authenticate Docker to ECR
+      - name: Authenticate Docker to ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URL
 
-      # Build and push the Docker image to ECR
-      - name: Push Lambda ZIP to ECR
+      # Tag and Push the Lambda ZIP to ECR
+      - name: Tag and Push the Lambda ZIP to ECR
         run: |
           docker build -t $ECR_REPO_URL:latest .
           docker push $ECR_REPO_URL:latest
-
-      # Upload the Lambda ZIP to S3 (to be used in the CD step)
-      - name: Upload to S3
-        run: |
-          aws s3 cp build/demo_lambda_function.zip s3://demo-lambda-deployment-bucket-nov/demo_lambda_function.zip
 
       # Run Terraform apply for the remaining resources, including the Lambda function
       - name: Run Terraform Apply for Lambda Deployment
