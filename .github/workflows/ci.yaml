@@ -62,9 +62,10 @@ jobs:
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URL
 
-      # Tag and Push the Lambda ZIP to ECR
-      - name: Tag and Push the Lambda ZIP to ECR
+      # Navigate to App directory where Dockerfile exists, then build and push Docker image
+      - name: Build Docker Image and Push to ECR
         run: |
+          cd App
           docker build -t $ECR_REPO_URL:latest .
           docker push $ECR_REPO_URL:latest
 
