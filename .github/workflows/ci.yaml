@@ -55,26 +55,18 @@ jobs:
         run: |
           terraform apply -auto-approve -target=aws_s3_bucket.lambda_deployment_bucket
 
-      # Build Lambda ZIP file from App folder
-      - name: Build Lambda ZIP
-        run: |
-          mkdir -p build
-          cd App
-          zip -r ../build/demo_lambda_function.zip demo_lambda_function.py -x "*.git/*" "*.md"
-
-      # Authenticate Docker to ECR
+      # Build Docker Image and Push to ECR
       - name: Authenticate Docker to ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URL
 
-      # Navigate to App directory where Dockerfile exists, then build and push Docker image
       - name: Build Docker Image and Push to ECR
         run: |
           cd App
           docker build -t $ECR_REPO_URL:latest .
           docker push $ECR_REPO_URL:latest
 
-      # Run Terraform apply for the remaining resources, including the Lambda function
+      # Run Terraform apply for the remaining resources (Lambda function)
       - name: Run Terraform Apply for Lambda Deployment
         run: |
           terraform apply -auto-approve
