@@ -66,14 +66,19 @@ jobs:
       # Extract the ECR repository URL from the Terraform output JSON
       - name: Set ECR Repo URL
         run: |
-          echo "ECR_REPO_URL=$(jq -r '.ecr_repo_url.value' tf_outputs.json)" >> $GITHUB_ENV
+          export ECR_REPO_URL=$(jq -r '.ecr_repo_url.value' tf_outputs.json)
+          if [ -z "$ECR_REPO_URL" ]; then
+            echo "ECR_REPO_URL is empty. Please check Terraform outputs."
+            exit 1
+          fi
+          echo "ECR_REPO_URL=$ECR_REPO_URL" >> $GITHUB_ENV
 
       # Log in to ECR using the specified URL and region
       - name: Login to ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URL
 
-      # Push the Lambda ZIP to ECR
+      # Build and push the Docker image to ECR
       - name: Push Lambda ZIP to ECR
         run: |
           docker build -t $ECR_REPO_URL:latest .
