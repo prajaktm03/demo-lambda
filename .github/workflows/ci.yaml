@@ -1,0 +1,47 @@
+name: CI Part
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: "us-east-1"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Read Terraform Version
+        id: tf_version
+        run: echo "TF_VERSION=$(cat .terraform-version)" >> $GITHUB_ENV
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build Lambda ZIP
+        run: |
+          mkdir build
+          zip -r build/demo_lambda_function.zip . -x ".git/*" "*.md"
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp build/demo_lambda_function.zip s3://demo-lambda-deployment-bucket-nov/demo_lambda_function.zip
+
+      - name: Run Terraform Init and Apply
+        run: |
+          terraform init
+          terraform apply -auto-approve
