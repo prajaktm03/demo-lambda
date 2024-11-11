@@ -40,6 +40,10 @@ jobs:
           terraform import aws_ecr_repository.lambda_deployment_repo lambda-deployment-repo || true
           terraform import aws_iam_role.lambda_role lambda_execution_role || true
 
+      # Ensure Terraform state is refreshed before applying
+      - name: Terraform Refresh
+        run: terraform refresh
+
       # First, apply only the S3 bucket creation (if it didn't exist and needed to be created)
       - name: Run Terraform Apply for S3 Bucket
         run: |
