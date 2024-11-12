@@ -100,8 +100,11 @@ jobs:
           # Check if function exists
           FUNCTION_EXISTS=$(aws lambda get-function --function-name $FUNCTION_NAME --query "Configuration.FunctionName" --output text 2>/dev/null)
 
+          # Debug: Print FUNCTION_EXISTS value
+          echo "FUNCTION_EXISTS: $FUNCTION_EXISTS"
+
           # If Lambda function doesn't exist, create it
-          if [ "$FUNCTION_EXISTS" != "$FUNCTION_NAME" ]; then
+          if [ "$FUNCTION_EXISTS" == "None" ]; then
             echo "Creating Lambda Function"
             aws lambda create-function \
               --function-name $FUNCTION_NAME \
