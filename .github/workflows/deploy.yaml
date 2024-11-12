@@ -18,11 +18,11 @@ jobs:
 
     # Set up AWS CLI
     - name: Set up AWS CLI
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v2 # Updated to v2
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1 # Your desired region
+        aws-region: us-east-1 # Correct input key for v2
 
     # Zip the Lambda function code
     - name: Create zip of Lambda function
@@ -36,5 +36,3 @@ jobs:
     - name: Upload to S3
       run: |
         aws s3 cp demo_lambda_function.zip s3://my-lambda-deployment-bucket-prajakt/lambda_code/demo_lambda_function.zip
-
-
