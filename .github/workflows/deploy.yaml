@@ -22,17 +22,24 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1 # Correct input key
+        aws-region: us-east-1
+
+    # Enable versioning on the S3 bucket
+    - name: Enable versioning on S3 bucket
+      run: |
+        aws s3api put-bucket-versioning \
+          --bucket my-lambda-deployment-bucket-prajakt \
+          --versioning-configuration Status=Enabled
 
     # Install Python dependencies
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.x'  # Use the same version as your Lambda runtime
+        python-version: '3.x'
 
     - name: Install linter
       run: |
-        pip install flake8  # Install flake8 or any other linter you prefer
+        pip install flake8
 
     # Run linter to check for issues
     - name: Lint Python Code
