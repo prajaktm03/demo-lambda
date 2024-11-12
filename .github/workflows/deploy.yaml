@@ -18,7 +18,7 @@ jobs:
 
     # Set up AWS CLI
     - name: Set up AWS CLI
-      uses: aws-actions/configure-aws-credentials@v2.1.0 # Specify exact version
+      uses: aws-actions/configure-aws-credentials@v2.1.0
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -37,3 +37,10 @@ jobs:
       run: |
         aws s3 cp demo_lambda_function.zip s3://my-lambda-deployment-bucket-prajakt/lambda_code/demo_lambda_function.zip
 
+    # Update Lambda function code from the S3 bucket
+    - name: Update Lambda Function Code
+      run: |
+        aws lambda update-function-code \
+          --function-name myLambdaFunction \
+          --s3-bucket my-lambda-deployment-bucket-prajakt \
+          --s3-key lambda_code/demo_lambda_function.zip
