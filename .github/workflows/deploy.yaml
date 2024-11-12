@@ -24,14 +24,18 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    # Check if S3 bucket exists, if not create it
-    - name: Create S3 bucket if not exists
+    # Create Lambda function if it doesn't exist
+    - name: Create Lambda Function
       run: |
-        if ! aws s3api head-bucket --bucket my-lambda-deployment-bucket-prajakt 2>/dev/null; then
-          aws s3api create-bucket --bucket my-lambda-deployment-bucket-prajakt --region us-east-1
-        else
-          echo "Bucket already exists."
-        fi
+        aws lambda get-function --function-name myLambdaFunction || \
+        aws lambda create-function \
+          --function-name myLambdaFunction \
+          --runtime python3.9 \
+          --role arn:aws:iam::557690625714:role/your-lambda-role \
+          --handler demo_lambda_function.lambda_handler \
+          --code S3Bucket=my-lambda-deployment-bucket-prajakt,S3Key=lambda_code/demo_lambda_function.zip
+      env:
+        YOUR_ACCOUNT_ID: "557690625714"  # Replace with your actual AWS Account ID
 
     # Enable versioning on the S3 bucket
     - name: Enable versioning on S3 bucket
@@ -40,33 +44,24 @@ jobs:
           --bucket my-lambda-deployment-bucket-prajakt \
           --versioning-configuration Status=Enabled
 
-    # Install Python dependencies
-    - name: Set up Python
+    # Install Python dependencies and Lint Code
+    - name: Set up Python and Lint
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-
     - name: Install linter
-      run: |
-        pip install flake8
-
-    # Run linter to check for issues
+      run: pip install flake8
     - name: Lint Python Code
-      run: |
-        flake8 App/ --max-line-length=120 --ignore=E302  
+      run: flake8 App/ --max-line-length=120 --ignore=E302  
 
-    # Zip the Lambda function code
-    - name: Create zip of Lambda function
+    # Zip and Upload Lambda function code to S3
+    - name: Create and Upload Lambda Code Zip to S3
       run: |
         mkdir -p lambda_package
         cp App/demo_lambda_function.py lambda_package/
         cd lambda_package
         zip -r ../demo_lambda_function.zip .
-
-    # Upload the zip file to S3
-    - name: Upload to S3
-      run: |
-        aws s3 cp demo_lambda_function.zip s3://my-lambda-deployment-bucket-prajakt/lambda_code/demo_lambda_function.zip
+        aws s3 cp ../demo_lambda_function.zip s3://my-lambda-deployment-bucket-prajakt/lambda_code/demo_lambda_function.zip
 
     # Update Lambda function code from the S3 bucket
     - name: Update Lambda Function Code
@@ -75,43 +70,3 @@ jobs:
           --function-name myLambdaFunction \
           --s3-bucket my-lambda-deployment-bucket-prajakt \
           --s3-key lambda_code/demo_lambda_function.zip
-
-    # Grant S3 permission to invoke the Lambda function
-    - name: Add Lambda Invoke Permission for S3
-      run: |
-        aws lambda add-permission \
-          --function-name myLambdaFunction \
-          --principal s3.amazonaws.com \
-          --statement-id "s3invoke-$(date +%s)" \
-          --action "lambda:InvokeFunction" \
-          --source-arn arn:aws:s3:::my-lambda-deployment-bucket-prajakt \
-          --source-account 557690625714  # Replace with your AWS account ID
-
-    # Create notification.json file for S3 trigger configuration
-    - name: Create S3 Notification Configuration File
-      run: |
-        echo '{
-          "LambdaFunctionConfigurations": [
-            {
-              "LambdaFunctionArn": "arn:aws:lambda:us-east-1:557690625714:function:myLambdaFunction",
-              "Events": ["s3:ObjectCreated:*"],
-              "Filter": {
-                "Key": {
-                  "FilterRules": [
-                    {
-                      "Name": "prefix",
-                      "Value": "lambda_code/"
-                    }
-                  ]
-                }
-              }
-            }
-          ]
-        }' > notification.json
-
-    # Add S3 event notification to trigger Lambda
-    - name: Add S3 Event Notification
-      run: |
-        aws s3api put-bucket-notification-configuration \
-          --bucket my-lambda-deployment-bucket-prajakt \
-          --notification-configuration file://notification.json
