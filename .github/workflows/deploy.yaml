@@ -67,11 +67,33 @@ jobs:
           --s3-bucket my-lambda-deployment-bucket-prajakt \
           --s3-key lambda_code/demo_lambda_function.zip
 
+    # Create notification.json file for S3 trigger configuration
+    - name: Create S3 Notification Configuration File
+      run: |
+        echo '{
+          "LambdaFunctionConfigurations": [
+            {
+              "LambdaFunctionArn": "${AWS_LAMBDA_FUNCTION_ARN}",
+              "Events": ["s3:ObjectCreated:*"],
+              "Filter": {
+                "Key": {
+                  "FilterRules": [
+                    {
+                      "Name": "prefix",
+                      "Value": "lambda_code/"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }' > notification.json
+      env:
+        AWS_LAMBDA_FUNCTION_ARN: arn:aws:lambda:us-east-1:557690625714:function:myLambdaFunction
+
     # Add S3 event notification to trigger Lambda
     - name: Add S3 Event Notification
       run: |
         aws s3api put-bucket-notification-configuration \
           --bucket my-lambda-deployment-bucket-prajakt \
           --notification-configuration file://notification.json
-      env:
-        AWS_LAMBDA_FUNCTION_ARN: arn:aws:lambda:us-east-1:557690625714:function:myLambdaFunction
