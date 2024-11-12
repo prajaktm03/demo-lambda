@@ -1,0 +1,40 @@
+name: CI/CD Pipeline for Lambda
+
+on:
+  push:
+    paths:
+      - 'App/**' # Trigger on changes to the App folder
+    branches:
+      - main # Trigger on push to the main branch
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout code from GitHub repository
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Set up AWS CLI
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        region: us-east-1 # Your desired region
+
+    # Zip the Lambda function code
+    - name: Create zip of Lambda function
+      run: |
+        mkdir -p lambda_package
+        cp App/demo_lambda_function.py lambda_package/
+        cd lambda_package
+        zip -r ../demo_lambda_function.zip .
+
+    # Upload the zip file to S3
+    - name: Upload to S3
+      run: |
+        aws s3 cp demo_lambda_function.zip s3://my-lambda-deployment-bucket-prajakt/lambda_code/demo_lambda_function.zip
+
+
