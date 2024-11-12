@@ -1,10 +1,10 @@
 name: CI/CD Pipeline for Lambda
 
 on:
-  #workflow_dispatch:
-    paths:
+  workflow_dispatch:
+  paths:
       - 'App/**' # Trigger on changes to the App folder
-    branches:
+  branches:
       - main # Trigger on push to the main branch
 
 jobs:
