@@ -1,8 +1,7 @@
 name: CI/CD Pipeline for Lambda
 
 on:
-  #push:
-  workflow_dispatch:
+  #workflow_dispatch:
     paths:
       - 'App/**' # Trigger on changes to the App folder
     branches:
@@ -51,9 +50,10 @@ jobs:
         # If role doesn't exist, create it
         if [ "$ROLE_ARN" == "None" ]; then
           echo "Role $ROLE_NAME does not exist, creating it..."
-          aws iam create-role \
+          ROLE_ARN=$(aws iam create-role \
             --role-name $ROLE_NAME \
-            --assume-role-policy-document "$TRUST_POLICY"
+            --assume-role-policy-document "$TRUST_POLICY" \
+            --query "Role.Arn" --output text)
 
           # Attach basic Lambda execution policy
           aws iam attach-role-policy \
@@ -91,12 +91,11 @@ jobs:
       run: |
         aws s3 cp demo_lambda_function.zip s3://my-lambda-deployment-bucket-prajakt/lambda_code/demo_lambda_function.zip
 
-    # Create Lambda Function if it does not exist
+    # Create or Update Lambda Function
     - name: Create or Update Lambda Function
       run: |
         FUNCTION_NAME="myLambdaFunction"
-        ROLE_ARN=$(aws iam get-role --role-name my-lambda-execution-role --query "Role.Arn" --output text)
-
+        
         # Check if function exists
         FUNCTION_EXISTS=$(aws lambda get-function --function-name $FUNCTION_NAME --query "Configuration.FunctionName" --output text 2>/dev/null)
 
