@@ -73,10 +73,10 @@ jobs:
         aws lambda add-permission \
           --function-name myLambdaFunction \
           --principal s3.amazonaws.com \
-          --statement-id s3invoke \
+          --statement-id "s3invoke-$(date +%s)" \
           --action "lambda:InvokeFunction" \
           --source-arn arn:aws:s3:::my-lambda-deployment-bucket-prajakt \
-          --source-account 557690625714
+          --source-account 557690625714  # Replace with your AWS account ID
 
     # Create notification.json file for S3 trigger configuration
     - name: Create S3 Notification Configuration File
@@ -109,14 +109,5 @@ jobs:
 
 
 
-     # Grant S3 permission to invoke the Lambda function
-    - name: Add Lambda Invoke Permission for S3
-      run: |
-        aws lambda add-permission \
-          --function-name myLambdaFunction \
-          --principal s3.amazonaws.com \
-          --statement-id "s3invoke-$(date +%s)" \
-          --action "lambda:InvokeFunction" \
-          --source-arn arn:aws:s3:::my-lambda-deployment-bucket-prajakt \
-          --source-account 557690625714  # Replace with your AWS account ID
+     
 
