@@ -97,23 +97,17 @@ jobs:
         run: |
           FUNCTION_NAME="myLambdaFunction"
           
-          # Check if function exists
-          FUNCTION_EXISTS=$(aws lambda get-function --function-name $FUNCTION_NAME --query "Configuration.FunctionName" --output text 2>/dev/null)
-          
-          # Debug: Print FUNCTION_EXISTS value
-          echo "FUNCTION_EXISTS: $FUNCTION_EXISTS"
+          # Try to get function details
+          aws lambda get-function --function-name $FUNCTION_NAME > /dev/null 2>&1
 
-          # If the Lambda function exists, it will not return "None"
-          if [ "$FUNCTION_EXISTS" == "None" ]; then
-            echo "Creating Lambda Function"
-            aws lambda create-function \
+          # Check the exit code of the get-function command
+          if [ $? -eq 0 ]; then
+            echo "Updating Lambda Function"
+            aws lambda update-function-code \
               --function-name $FUNCTION_NAME \
-              --runtime python3.9 \
-              --role $ROLE_ARN \
-              --handler demo_lambda_function.lambda_handler \
-              --code S3Bucket=my-lambda-deployment-bucket-prajakt,S3Key=lambda_code/demo_lambda_function.zip
-          elif [ -z "$FUNCTION_EXISTS" ] || [ "$FUNCTION_EXISTS" == "None" ]; then
-            # If get-function fails (e.g., Lambda doesn't exist), create the function
+              --s3-bucket my-lambda-deployment-bucket-prajakt \
+              --s3-key lambda_code/demo_lambda_function.zip
+          else
             echo "Lambda function does not exist, creating it..."
             aws lambda create-function \
               --function-name $FUNCTION_NAME \
@@ -121,12 +115,6 @@ jobs:
               --role $ROLE_ARN \
               --handler demo_lambda_function.lambda_handler \
               --code S3Bucket=my-lambda-deployment-bucket-prajakt,S3Key=lambda_code/demo_lambda_function.zip
-          else
-            echo "Updating Lambda Function"
-            aws lambda update-function-code \
-              --function-name $FUNCTION_NAME \
-              --s3-bucket my-lambda-deployment-bucket-prajakt \
-              --s3-key lambda_code/demo_lambda_function.zip
           fi
 
       # Grant S3 permission to invoke the Lambda function
