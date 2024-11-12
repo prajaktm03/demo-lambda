@@ -97,11 +97,16 @@ jobs:
         run: |
           FUNCTION_NAME="myLambdaFunction"
           
-          # Try to get function details
-          aws lambda get-function --function-name $FUNCTION_NAME > /dev/null 2>&1
+          # Capture output of get-function
+          GET_FUNCTION_OUTPUT=$(aws lambda get-function --function-name $FUNCTION_NAME --region us-east-1 2>&1)
+          GET_FUNCTION_EXIT_CODE=$?
 
-          # Check the exit code of the get-function command
-          if [ $? -eq 0 ]; then
+          # Debugging: Print the output and exit code
+          echo "get-function output: $GET_FUNCTION_OUTPUT"
+          echo "get-function exit code: $GET_FUNCTION_EXIT_CODE"
+
+          # If get-function is successful, update function code
+          if [ $GET_FUNCTION_EXIT_CODE -eq 0 ]; then
             echo "Updating Lambda Function"
             aws lambda update-function-code \
               --function-name $FUNCTION_NAME \
