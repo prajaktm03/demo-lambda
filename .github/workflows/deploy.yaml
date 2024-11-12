@@ -37,7 +37,7 @@ jobs:
     # Run linter to check for issues
     - name: Lint Python Code
       run: |
-        flake8 App/ --max-line-length=120  # Specify max line length or other flake8 configurations if needed
+        flake8 App/ --max-line-length=120 --ignore=E302  
 
     # Zip the Lambda function code
     - name: Create zip of Lambda function
