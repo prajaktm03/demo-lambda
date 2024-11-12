@@ -24,6 +24,21 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1 # Correct input key
 
+    # Install Python dependencies
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'  # Use the same version as your Lambda runtime
+
+    - name: Install linter
+      run: |
+        pip install flake8  # Install flake8 or any other linter you prefer
+
+    # Run linter to check for issues
+    - name: Lint Python Code
+      run: |
+        flake8 App/ --max-line-length=120  # Specify max line length or other flake8 configurations if needed
+
     # Zip the Lambda function code
     - name: Create zip of Lambda function
       run: |
