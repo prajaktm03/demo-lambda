@@ -122,7 +122,7 @@ jobs:
               --code S3Bucket=my-lambda-deployment-bucket-prajakt,S3Key=lambda_code/demo_lambda_function.zip
           fi
 
-      # Grant S3 permission to invoke the Lambda function
+      # Add Lambda Invoke Permission for S3 (only after Lambda creation)
       - name: Add Lambda Invoke Permission for S3
         run: |
           aws lambda add-permission \
@@ -155,7 +155,7 @@ jobs:
             ]
           }' > notification.json
 
-      # Add S3 event notification to trigger Lambda
+      # Add S3 event notification to trigger Lambda (only after Lambda creation/update)
       - name: Add S3 Event Notification
         run: |
           aws s3api put-bucket-notification-configuration \
