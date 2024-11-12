@@ -1,7 +1,8 @@
 name: CI/CD Pipeline for Lambda
 
 on:
-  push:
+  #push:
+  workflow_dispatch:
     paths:
       - 'App/**' # Trigger on changes to the App folder
     branches:
@@ -45,11 +46,11 @@ jobs:
 
         # Check if the role exists
         echo "Checking if role $ROLE_NAME exists"
-        ROLE_ARN=$(aws iam get-role --role-name $ROLE_NAME --query "Role.Arn" --output text 2>/dev/null)
+        ROLE_ARN=$(aws iam get-role --role-name $ROLE_NAME --query "Role.Arn" --output text 2>/dev/null || echo "None")
 
         # If role doesn't exist, create it
         if [ "$ROLE_ARN" == "None" ]; then
-          echo "Creating IAM Role for Lambda"
+          echo "Role $ROLE_NAME does not exist, creating it..."
           aws iam create-role \
             --role-name $ROLE_NAME \
             --assume-role-policy-document "$TRUST_POLICY"
