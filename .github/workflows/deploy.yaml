@@ -99,13 +99,22 @@ jobs:
           
           # Check if function exists
           FUNCTION_EXISTS=$(aws lambda get-function --function-name $FUNCTION_NAME --query "Configuration.FunctionName" --output text 2>/dev/null)
-
+          
           # Debug: Print FUNCTION_EXISTS value
           echo "FUNCTION_EXISTS: $FUNCTION_EXISTS"
 
-          # If Lambda function doesn't exist, create it
+          # If the Lambda function exists, it will not return "None"
           if [ "$FUNCTION_EXISTS" == "None" ]; then
             echo "Creating Lambda Function"
+            aws lambda create-function \
+              --function-name $FUNCTION_NAME \
+              --runtime python3.9 \
+              --role $ROLE_ARN \
+              --handler demo_lambda_function.lambda_handler \
+              --code S3Bucket=my-lambda-deployment-bucket-prajakt,S3Key=lambda_code/demo_lambda_function.zip
+          elif [ -z "$FUNCTION_EXISTS" ] || [ "$FUNCTION_EXISTS" == "None" ]; then
+            # If get-function fails (e.g., Lambda doesn't exist), create the function
+            echo "Lambda function does not exist, creating it..."
             aws lambda create-function \
               --function-name $FUNCTION_NAME \
               --runtime python3.9 \
