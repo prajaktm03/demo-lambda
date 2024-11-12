@@ -24,49 +24,133 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    # Create Lambda function if it doesn't exist
-    - name: Create Lambda Function
+    # Create IAM role for Lambda if it doesn't exist
+    - name: Create Lambda Execution Role
       run: |
-        aws lambda get-function --function-name myLambdaFunction || \
-        aws lambda create-function \
-          --function-name myLambdaFunction \
-          --runtime python3.9 \
-          --role arn:aws:iam::557690625714:role/your-lambda-role \
-          --handler demo_lambda_function.lambda_handler \
-          --code S3Bucket=my-lambda-deployment-bucket-prajakt,S3Key=lambda_code/demo_lambda_function.zip
-      env:
-        YOUR_ACCOUNT_ID: "557690625714"  # Replace with your actual AWS Account ID
+        ROLE_NAME="my-lambda-execution-role"
+        TRUST_POLICY='{
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }'
+        
+        POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 
-    # Enable versioning on the S3 bucket
-    - name: Enable versioning on S3 bucket
-      run: |
-        aws s3api put-bucket-versioning \
-          --bucket my-lambda-deployment-bucket-prajakt \
-          --versioning-configuration Status=Enabled
+        # Check if the role exists
+        ROLE_ARN=$(aws iam get-role --role-name $ROLE_NAME --query "Role.Arn" --output text 2>/dev/null)
 
-    # Install Python dependencies and Lint Code
-    - name: Set up Python and Lint
+        # If role doesn't exist, create it
+        if [ "$ROLE_ARN" == "None" ]; then
+          echo "Creating IAM Role for Lambda"
+          aws iam create-role \
+            --role-name $ROLE_NAME \
+            --assume-role-policy-document "$TRUST_POLICY"
+
+          # Attach basic Lambda execution policy
+          aws iam attach-role-policy \
+            --role-name $ROLE_NAME \
+            --policy-arn $POLICY_ARN
+        else
+          echo "Role $ROLE_NAME already exists, using existing role."
+        fi
+
+    # Install Python dependencies
+    - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-    - name: Install linter
-      run: pip install flake8
-    - name: Lint Python Code
-      run: flake8 App/ --max-line-length=120 --ignore=E302  
 
-    # Zip and Upload Lambda function code to S3
-    - name: Create and Upload Lambda Code Zip to S3
+    - name: Install linter
+      run: |
+        pip install flake8
+
+    # Run linter to check for issues
+    - name: Lint Python Code
+      run: |
+        flake8 App/ --max-line-length=120 --ignore=E302  
+
+    # Zip the Lambda function code
+    - name: Create zip of Lambda function
       run: |
         mkdir -p lambda_package
         cp App/demo_lambda_function.py lambda_package/
         cd lambda_package
         zip -r ../demo_lambda_function.zip .
-        aws s3 cp ../demo_lambda_function.zip s3://my-lambda-deployment-bucket-prajakt/lambda_code/demo_lambda_function.zip
 
-    # Update Lambda function code from the S3 bucket
-    - name: Update Lambda Function Code
+    # Upload the zip file to S3
+    - name: Upload to S3
       run: |
-        aws lambda update-function-code \
+        aws s3 cp demo_lambda_function.zip s3://my-lambda-deployment-bucket-prajakt/lambda_code/demo_lambda_function.zip
+
+    # Create Lambda Function if it does not exist
+    - name: Create or Update Lambda Function
+      run: |
+        FUNCTION_NAME="myLambdaFunction"
+        ROLE_ARN=$(aws iam get-role --role-name my-lambda-execution-role --query "Role.Arn" --output text)
+
+        # Check if function exists
+        FUNCTION_EXISTS=$(aws lambda get-function --function-name $FUNCTION_NAME --query "Configuration.FunctionName" --output text 2>/dev/null)
+
+        # If Lambda function doesn't exist, create it
+        if [ "$FUNCTION_EXISTS" == "None" ]; then
+          echo "Creating Lambda Function"
+          aws lambda create-function \
+            --function-name $FUNCTION_NAME \
+            --runtime python3.9 \
+            --role $ROLE_ARN \
+            --handler demo_lambda_function.lambda_handler \
+            --code S3Bucket=my-lambda-deployment-bucket-prajakt,S3Key=lambda_code/demo_lambda_function.zip
+        else
+          echo "Updating Lambda Function"
+          aws lambda update-function-code \
+            --function-name $FUNCTION_NAME \
+            --s3-bucket my-lambda-deployment-bucket-prajakt \
+            --s3-key lambda_code/demo_lambda_function.zip
+        fi
+
+    # Grant S3 permission to invoke the Lambda function
+    - name: Add Lambda Invoke Permission for S3
+      run: |
+        aws lambda add-permission \
           --function-name myLambdaFunction \
-          --s3-bucket my-lambda-deployment-bucket-prajakt \
-          --s3-key lambda_code/demo_lambda_function.zip
+          --principal s3.amazonaws.com \
+          --statement-id "s3invoke-$(date +%s)" \
+          --action "lambda:InvokeFunction" \
+          --source-arn arn:aws:s3:::my-lambda-deployment-bucket-prajakt \
+          --source-account 557690625714
+
+    # Create notification.json file for S3 trigger configuration
+    - name: Create S3 Notification Configuration File
+      run: |
+        echo '{
+          "LambdaFunctionConfigurations": [
+            {
+              "LambdaFunctionArn": "arn:aws:lambda:us-east-1:557690625714:function:myLambdaFunction",
+              "Events": ["s3:ObjectCreated:*"],
+              "Filter": {
+                "Key": {
+                  "FilterRules": [
+                    {
+                      "Name": "prefix",
+                      "Value": "lambda_code/"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }' > notification.json
+
+    # Add S3 event notification to trigger Lambda
+    - name: Add S3 Event Notification
+      run: |
+        aws s3api put-bucket-notification-configuration \
+          --bucket my-lambda-deployment-bucket-prajakt \
+          --notification-configuration file://notification.json
