@@ -24,13 +24,14 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    # Create S3 bucket if it doesn't exist
-    - name: Create S3 bucket
+    # Check if S3 bucket exists, if not create it
+    - name: Create S3 bucket if not exists
       run: |
-        aws s3api create-bucket \
-          --bucket my-lambda-deployment-bucket-prajakt \
-          --region us-east-1 \
-          --create-bucket-configuration LocationConstraint=us-east-1 || echo "Bucket already exists."
+        if ! aws s3api head-bucket --bucket my-lambda-deployment-bucket-prajakt 2>/dev/null; then
+          aws s3api create-bucket --bucket my-lambda-deployment-bucket-prajakt --region us-east-1
+        else
+          echo "Bucket already exists."
+        fi
 
     # Enable versioning on the S3 bucket
     - name: Enable versioning on S3 bucket
